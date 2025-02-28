@@ -26,8 +26,8 @@ class Player(pygame.sprite.Sprite):
     def __init__(self, pos_x, pos_y):
         super().__init__(player_group, all_sprites)
         self.image = player_image
-        self.rect = self.image.get_rect().move(
-            tile_width * pos_x + 15, tile_height * pos_y + 5)
+        self.rect = self.image.get_rect()
+        self.rect.centerx, self.rect.centery = (pos_x + 0.5) * tile_width, (pos_y + 0.5) * tile_height
         self.x, self.y = int(self.rect.x / tile_width), int(self.rect.y / tile_height)
         
 
@@ -39,13 +39,25 @@ class Camera:
         
     # сдвинуть объект obj на смещение камеры
     def apply(self, obj):
+        if obj.rect.x < 0:
+            obj.rect.x = width - tile_width * (obj.rect.x / tile_width) * -1
+
+        elif obj.rect.x >= width:
+            obj.rect.x = 0 + tile_width * ((obj.rect.x - width) / tile_width) 
+
+        if obj.rect.y < 0:
+            obj.rect.y = height - tile_width * (obj.rect.y / tile_height) * -1
+
+        elif obj.rect.y >= height:
+            obj.rect.y = 0 + tile_height * ((obj.rect.y - height) / tile_height)
+
         obj.rect.x += self.dx
         obj.rect.y += self.dy
     
     # позиционировать камеру на объекте target
     def update(self, target):
-        self.dx = -(target.rect.x + target.rect.w // 2 - width // 2)
-        self.dy = -(target.rect.y + target.rect.h // 2 - height // 2)
+        self.dx = -(target.rect.centerx- width // 2)
+        self.dy = -(target.rect.centery - height // 2)
         
 
 def terminate():
@@ -119,6 +131,7 @@ if __name__ == '__main__':
     pygame.init()
 
     width, height = len(level[0]) * tile_width, len(level) * tile_height
+
     screen = pygame.display.set_mode((width, height))
 
     clock = pygame.time.Clock()
@@ -135,40 +148,67 @@ if __name__ == '__main__':
 
             elif event.type == pygame.KEYDOWN:
                 x, y = player.x, player.y
-                
+
                 if event.key == pygame.K_w:
                     y -= 1
-                    
-                    if y >= 0 and level[y][x] != '#':
+
+                    if y < 0:
+                        y = len(level) - 1
+                                        
+                    if level[y][x] != '#':
                         player.rect.y -= tile_height
                         player.y -= 1
+
+                        if player.y < 0:
+                            player.y = y
 
                 if event.key == pygame.K_a:
                     x -= 1
                     
-                    if x >= 0 and level[y][x] != '#':
+                    if x < 0:
+                        x = len(level[y]) - 1
+                    
+                    if level[y][x] != '#':
                         player.rect.x -= tile_width
                         player.x -= 1
+
+                        if player.x < 0:
+                            player.x = x
                 
                 if event.key == pygame.K_s:
                     y += 1
+
+                    if y > len(level) - 1:
+                            y = 0
                     
-                    if y < len(level) and level[y][x] != '#':
+                    if level[y][x] != '#':
                         player.rect.y += tile_height
                         player.y += 1
+
+
+                        if player.y > len(level) - 1:
+                            player.y = 0
+
 
                 if event.key == pygame.K_d:
                     x += 1
                     
-                    if x < len(level[y]) and level[y][x] != '#':
+                    if x > len(level[y]) - 1:
+                        x = 0
+                    
+                    if level[y][x] != '#':
                         player.rect.x += tile_width
                         player.x += 1
+
+                        if player.x > len(level[y]) - 1:
+                            player.x = 0
         
         # изменяем ракурс камеры
         camera.update(player)
         # обновляем положение всех спрайтов
         for sprite in all_sprites:
             camera.apply(sprite)
+
 
         screen.fill(pygame.color.Color('black'))
         tiles_group.update()
